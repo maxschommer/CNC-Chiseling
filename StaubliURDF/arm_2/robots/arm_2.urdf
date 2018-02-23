@@ -1,5 +1,5 @@
 <robot
-  name="Arm_2">
+  name="arm_2">
   <link
     name="base_link">
     <inertial>
@@ -9,12 +9,12 @@
       <mass
         value="5.3438" />
       <inertia
-        ixx="0"
+        ixx="104.09"
         ixy="0"
         ixz="0"
-        iyy="0"
+        iyy="104.09"
         iyz="0"
-        izz="0" />
+        izz="73.96" />
     </inertial>
     <visual>
       <origin
@@ -22,7 +22,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/base_link.STL" />
+          filename="package://arm_2/meshes/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -36,7 +36,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/base_link.STL" />
+          filename="package://arm_2/meshes/base_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -49,12 +49,12 @@
       <mass
         value="10.375" />
       <inertia
-        ixx="0"
+        ixx="264.47"
         ixy="0"
-        ixz="0"
-        iyy="0"
+        ixz="0.64"
+        iyy="284.51"
         iyz="0"
-        izz="0" />
+        izz="266" />
     </inertial>
     <visual>
       <origin
@@ -62,7 +62,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_1.STL" />
+          filename="package://arm_2/meshes/Link_1.STL" />
       </geometry>
       <material
         name="">
@@ -76,7 +76,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_1.STL" />
+          filename="package://arm_2/meshes/Link_1.STL" />
       </geometry>
     </collision>
   </link>
@@ -85,7 +85,7 @@
     type="continuous">
     <origin
       xyz="0 0 0.21"
-      rpy="-6.123E-17 0 0" />
+      rpy="0 0 0" />
     <parent
       link="base_link" />
     <child
@@ -102,12 +102,12 @@
       <mass
         value="7.5525" />
       <inertia
-        ixx="0"
+        ixx="464.52"
         ixy="0"
         ixz="0"
-        iyy="0"
+        iyy="424.13"
         iyz="0"
-        izz="0" />
+        izz="83.4" />
     </inertial>
     <visual>
       <origin
@@ -115,7 +115,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_2.STL" />
+          filename="package://arm_2/meshes/Link_2.STL" />
       </geometry>
       <material
         name="">
@@ -129,7 +129,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_2.STL" />
+          filename="package://arm_2/meshes/Link_2.STL" />
       </geometry>
     </collision>
   </link>
@@ -155,12 +155,12 @@
       <mass
         value="3.85373493908444" />
       <inertia
-        ixx="0"
+        ixx="73.46"
         ixy="0"
-        ixz="0"
-        iyy="0"
+        ixz="-.44"
+        iyy="64.77"
         iyz="0"
-        izz="0" />
+        izz="39.22" />
     </inertial>
     <visual>
       <origin
@@ -168,7 +168,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_3.STL" />
+          filename="package://arm_2/meshes/Link_3.STL" />
       </geometry>
       <material
         name="">
@@ -182,7 +182,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_3.STL" />
+          filename="package://arm_2/meshes/Link_3.STL" />
       </geometry>
     </collision>
   </link>
@@ -208,12 +208,12 @@
       <mass
         value="1.9022" />
       <inertia
-        ixx="0"
+        ixx="28.02"
         ixy="0"
         ixz="0"
-        iyy="0"
-        iyz="0"
-        izz="0" />
+        iyy="29.53"
+        iyz="-.94"
+        izz="10.51" />
     </inertial>
     <visual>
       <origin
@@ -221,7 +221,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_4.STL" />
+          filename="package://arm_2/meshes/Link_4.STL" />
       </geometry>
       <material
         name="">
@@ -235,7 +235,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_4.STL" />
+          filename="package://arm_2/meshes/Link_4.STL" />
       </geometry>
     </collision>
   </link>
@@ -261,12 +261,12 @@
       <mass
         value="0.1701" />
       <inertia
-        ixx="0"
+        ixx=".49"
         ixy="0"
         ixz="0"
-        iyy="0"
+        iyy=".4"
         iyz="0"
-        izz="0" />
+        izz=".22" />
     </inertial>
     <visual>
       <origin
@@ -274,7 +274,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_5.STL" />
+          filename="package://arm_2/meshes/Link_5.STL" />
       </geometry>
       <material
         name="">
@@ -288,7 +288,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_5.STL" />
+          filename="package://arm_2/meshes/Link_5.STL" />
       </geometry>
     </collision>
   </link>
@@ -327,7 +327,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_6.STL" />
+          filename="package://arm_2/meshes/Link_6.STL" />
       </geometry>
       <material
         name="">
@@ -341,7 +341,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Arm_2/meshes/Link_6.STL" />
+          filename="package://arm_2/meshes/Link_6.STL" />
       </geometry>
     </collision>
   </link>
