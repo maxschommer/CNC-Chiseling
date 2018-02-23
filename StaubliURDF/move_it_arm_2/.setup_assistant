@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: arm_2
+    relative_path: robots/arm_2.urdf
+  SRDF:
+    relative_path: config/arm_2.srdf
+  CONFIG:
+    author_name: Maximilian Schommer
+    author_email: maxschommer@gmail.com
+    generated_timestamp: 1519393318

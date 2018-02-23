@@ -1,5 +1,4 @@
-<robot
-  name="arm_2">
+<robot name="arm_2">
   <link
     name="base_link">
     <inertial>
@@ -40,8 +39,7 @@
       </geometry>
     </collision>
   </link>
-  <link
-    name="Link_1">
+  <link name="Link_1">
     <inertial>
       <origin
         xyz="-0.019385 -8.9375E-10 0.12294"
@@ -93,8 +91,7 @@
     <axis
       xyz="0 0 1" />
   </joint>
-  <link
-    name="Link_2">
+  <link name="Link_2">
     <inertial>
       <origin
         xyz="0.05 -1.1837E-15 0.13394"
@@ -133,8 +130,7 @@
       </geometry>
     </collision>
   </link>
-  <joint
-    name="Joint_2"
+  <joint name="Joint_2"
     type="continuous">
     <origin
       xyz="0.0975 0 0.131"
@@ -146,8 +142,7 @@
     <axis
       xyz="1 0 0" />
   </joint>
-  <link
-    name="Link_3">
+  <link name="Link_3">
     <inertial>
       <origin
         xyz="-0.0579256660316841 -5.15120599368384E-08 -0.0132210404676266"
@@ -181,8 +176,7 @@
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://arm_2/meshes/Link_3.STL" />
+        <mesh filename="package://arm_2/meshes/Link_3.STL" />
       </geometry>
     </collision>
   </link>
