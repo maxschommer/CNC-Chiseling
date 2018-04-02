@@ -4,6 +4,8 @@ from stl import mesh
 from sortedcontainers import SortedList, SortedSet, SortedDict
 from mpl_toolkits import mplot3d
 from matplotlib import pyplot
+from shapely.geometry import Polygon, Point, LineString
+from descartes import PolygonPatch
 
 
 def calcPlaneTriangleIntersection( plane, triangle ):
@@ -11,7 +13,7 @@ def calcPlaneTriangleIntersection( plane, triangle ):
 	for i, vector in enumerate(triangle):
 		if np.dot(np.subtract( vector, plane.Point), plane.Normal) < 0:
 			pointSigns[i] = -1
-	
+
 	triangleLoc = np.sum(pointSigns)
 
 	if triangleLoc == -1:
@@ -33,6 +35,10 @@ def calcPlaneTriangleIntersection( plane, triangle ):
 	p1 = calcPlaneLineIntersection( plane, L1 )
 	p2 = calcPlaneLineIntersection( plane, L2 )
 	return [p1, p2]
+
+# determine if a point is inside a given polygon or not
+# Polygon is a list of (x,y) pairs.
+
 
 def tolerantBinarySearchVertexList( vertex, vertexList ):
     """Performs iterative binary search to find the position of an integer in a given, sorted, list.
@@ -104,11 +110,40 @@ def genTopology ( mesh ):
 
 		adjacentFaceList[j] = adjacentFaces
 
-
 	return MeshTopology(adjacentFaceList, faceList, vertexList)
 
-def genClosedLoop( mesh, MeshTopology,  plane ):
-	
+def genClosedLoop( MeshTopology,  plane ):
+	pass
+
+"""
+Optional paramaters to be added later for toolpath generation
+"""
+def genToolPath( polygonList ):
+	polygonInside = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+	polygonOutside = [(-2, -2), (-2, 2), (2, 2), (2, -2)]
+	# print(polygon.contains(Point(0.25, 0.05)))
+	poly = Polygon(polygonOutside, [polygonInside])
+	poly = poly.exterior.buffer(.1)
+	print(Polygon(poly.exterior))
+	line = LineString([(0, 0), (1, 1), (0, 2), (2, 2), (3, 1), (1, 0)])
+	dilated = line.buffer(0.5)
+	print(dilated.geom_type)
+	eroded = dilated.buffer(-0.3)
+	# print(polyBuffer)
+	x, y = poly.exterior.xy
+	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
+	ax = fig.add_subplot(111)
+	ax.plot(x, y, color='#6699cc', alpha=0.7,
+	    linewidth=3, solid_capstyle='round', zorder=2)
+	for insidePolygon in poly.interiors:
+		x, y = insidePolygon.xy
+		ax.plot(x, y, color='#6699cc', alpha=0.7,
+	    linewidth=3, solid_capstyle='round', zorder=2)
+
+	ax.set_title('Polygon')
+	pyplot.show()
+
+
 
 class Plane(object):
 	"""Describes a Plane"""
@@ -131,12 +166,11 @@ class MeshTopology(object):
 		self.adjacentFaces = adjacentFaces
 		self.faces = faces
 		self.vertices = vertices
-		
 
 def main():
 	# Create a new plot
-	figure = pyplot.figure()
-	axes = mplot3d.Axes3D(figure)
+	# figure = pyplot.figure()
+	# axes = mplot3d.Axes3D(figure)
 
 	# Load the STL files and add the vectors to the plot
 	meshData = mesh.Mesh.from_file('cube.stl')
@@ -150,15 +184,17 @@ def main():
 	# aList = [0,3,5,6,7,8,10]
 	# print(binary_search(aList, 10))
 	meshTopology = genTopology(meshData)
-	print(meshTopology.adjacentFaces)
+	genToolPath( [] )
+	# print(meshTopology.adjacentFaces)
 
-	axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
+	# axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
 
-	# Auto scale to the mesh size
-	scale = meshData.points.flatten(-1)
-	axes.auto_scale_xyz(scale, scale, scale)
+	# # Auto scale to the mesh size
+	# scale = meshData.points.flatten(-1)
+	# axes.auto_scale_xyz(scale, scale, scale)
 
-	# pyplot.show()
+
+	#ppyplot.show()
 
 if __name__ == '__main__':
 	main()

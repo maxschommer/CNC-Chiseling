@@ -23,3 +23,12 @@ cd ./StaubliURDF/move_it_arm_2/launch/
 roslaunch demo.launch use_gui:=true
 """
 
+# Running Slicer and CAM
+
+## Installs:
+
+Required packages can be installed via the following commands:
+
+"""
+sudo pip install numpy-stl bintrees sortedcontainers
+"""
