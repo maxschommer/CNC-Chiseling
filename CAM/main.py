@@ -74,8 +74,13 @@ def calcPlaneLineIntersection( plane, line ):
 def pointPlaneDist( plane, point ):
 	pass
 
-def dotProduct( v1, v2 ):
-	return v1.P1*v2.P1 + v1.P2*v2.P2 + v1.P3*v2.P3
+
+def projectPointToPlane( plane, planeX, point ):
+	plane.Normal = np.linalg.norm(plane.Normal)
+	planeX = np.linalg.norm(planeX)
+	x = np.dot((point-plane.Point), planeX)
+	y = np.dot((point-plane.Point), np.cross(plane.Normal, planeX))
+	return [x,y]
 
 def genTopology ( mesh ):
 
@@ -116,7 +121,6 @@ def genTopology ( mesh ):
 		adjacentFaceList[j] = adjacentFaces
 
 	return MeshTopology(adjacentFaceList, faceList, vertexList)
-
 
 
 def genClosedLoop( MeshTopology,  plane ):
