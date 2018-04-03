@@ -30,5 +30,6 @@ roslaunch demo.launch use_gui:=true
 Required packages can be installed via the following commands:
 
 """
-sudo pip install numpy-stl bintrees sortedcontainers
+sudo apt install python-tk
+sudo pip install numpy-stl bintrees sortedcontainers matplotlib shapely descartes
 """

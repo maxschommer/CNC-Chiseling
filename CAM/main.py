@@ -79,19 +79,26 @@ def dotProduct( v1, v2 ):
 	return v1.P1*v2.P1 + v1.P2*v2.P2 + v1.P3*v2.P3
 
 def genTopology ( mesh ):
+
+
 	vertexList = SortedList()
 	faceList = SortedList()
-	for i, triangle in enumerate(mesh.vectors):
+
+	for triangle in mesh.vectors:
+		for vertex in triangle:
+			j = tolerantBinarySearchVertexList( vertex, vertexList )
+			if (j == None):
+				vertexList.add(vertex.tolist())
+
+
+	for triangle in mesh.vectors:
 		face = []
 		for vertex in triangle:
-			inList = False
 			j = tolerantBinarySearchVertexList( vertex, vertexList )
 			if (j != None):
-				inList = True
 				face.append(j)
 			else:
-				vertexList.add(vertex.tolist())
-				face.append(len(vertexList)-1)
+				raise ValueError("Couldn't find vertex in list")
 
 		faceList.add(face)
 		
@@ -123,26 +130,48 @@ def genToolPath( polygonList ):
 	polygonOutside = [(-2, -2), (-2, 2), (2, 2), (2, -2)]
 	# print(polygon.contains(Point(0.25, 0.05)))
 	poly = Polygon(polygonOutside, [polygonInside])
-	poly = poly.exterior.buffer(.1)
-	print(Polygon(poly.exterior))
-	line = LineString([(0, 0), (1, 1), (0, 2), (2, 2), (3, 1), (1, 0)])
-	dilated = line.buffer(0.5)
-	print(dilated.geom_type)
-	eroded = dilated.buffer(-0.3)
+	ax = drawPoly(poly, [])
+
+	for i in np.linspace(0, -.8, 6):
+
+		poly2 = Polygon(poly).buffer(i)
+		combinePolygons([poly, poly2])
+		ax = drawPoly(poly2, ax)
+
 	# print(polyBuffer)
-	x, y = poly.exterior.xy
-	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
-	ax = fig.add_subplot(111)
-	ax.plot(x, y, color='#6699cc', alpha=0.7,
-	    linewidth=3, solid_capstyle='round', zorder=2)
-	for insidePolygon in poly.interiors:
-		x, y = insidePolygon.xy
-		ax.plot(x, y, color='#6699cc', alpha=0.7,
-	    linewidth=3, solid_capstyle='round', zorder=2)
 
 	ax.set_title('Polygon')
 	pyplot.show()
 
+def combinePolygons( polygonList ):
+	flattenedList = []
+	for polygon in polygonList:
+		if (type(polygon) == list) or polygon.geom_type == "MultiPolygon" :
+			print("Multi")
+			for subPolygon in polygon:
+				flattenedList.append(subPolygon)
+		else:
+			flattenedList.append(polygon)
+			print("Single")
+	return flattenedList
+
+def drawPoly ( polygon , ax ):
+	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
+	if ax == []:
+		ax = fig.add_subplot(111)
+
+	if polygon.geom_type != "MultiPolygon":
+		polygon = [polygon]
+
+	for poly in polygon:
+		x, y = poly.exterior.xy
+		ax.plot(x, y, color='#6699cc', alpha=0.7,
+		    linewidth=3, solid_capstyle='round', zorder=2)
+		for insidePolygon in poly.interiors:
+			x, y = insidePolygon.xy
+			ax.plot(x, y, color='#6699cc', alpha=0.7,
+		    linewidth=3, solid_capstyle='round', zorder=2)
+	return ax
 
 
 class Plane(object):
@@ -175,16 +204,18 @@ def main():
 	# Load the STL files and add the vectors to the plot
 	meshData = mesh.Mesh.from_file('cube.stl')
 
-	triangle = [[0,0,0], [1,0,0], [.5,1,0]]
-	plane = Plane([0, .001, 0], [0, 1, 0])
+	triangle = [[0,1,0], [1,1,0], [.5,.4,0]]
+	plane = Plane([0, .2, 0], [1, 1, 0])
 
+	for triangle in meshData.vectors:
 
-	intPoints = calcPlaneTriangleIntersection( plane, triangle )
-
+		intPoints = calcPlaneTriangleIntersection( plane, triangle )
+		print(intPoints)
 	# aList = [0,3,5,6,7,8,10]
 	# print(binary_search(aList, 10))
 	meshTopology = genTopology(meshData)
 	genToolPath( [] )
+	print(meshTopology.faces)
 	# print(meshTopology.adjacentFaces)
 
 	# axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
