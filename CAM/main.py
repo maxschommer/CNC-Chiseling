@@ -7,13 +7,12 @@ from matplotlib import pyplot
 from shapely.geometry import Polygon, Point, LineString
 from descartes import PolygonPatch
 
-
 def calcPlaneTriangleIntersection( plane, triangle ):
 	pointSigns = [1 ,1, 1]
 	for i, vector in enumerate(triangle):
 		if np.dot(np.subtract( vector, plane.Point), plane.Normal) < 0:
 			pointSigns[i] = -1
-
+	
 	triangleLoc = np.sum(pointSigns)
 
 	if triangleLoc == -1:
@@ -41,25 +40,25 @@ def calcPlaneTriangleIntersection( plane, triangle ):
 
 
 def tolerantBinarySearchVertexList( vertex, vertexList ):
-    """Performs iterative binary search to find the position of an integer in a given, sorted, list.
-    vertexList -- sorted list of integers
-    vertex -- integer you are searching for the position of
-    """
+		"""Performs iterative binary search to find the position of an integer in a given, sorted, list.
+		vertexList -- sorted list of integers
+		vertex -- integer you are searching for the position of
+		"""
 
-    first = 0
-    last = len(vertexList) - 1
-    vertex = vertex.tolist()
-    while first <= last:
-        i = (first + last) / 2
-        # print(vertex)
-        if tolerantEquals(vertexList[i], vertex):
-            return i
-        elif vertexList[i] > vertex:
-            last = i - 1
-        elif vertexList[i] < vertex:
-            first = i + 1
-        else:
-			return None
+		first = 0
+		last = len(vertexList) - 1
+		vertex = vertex.tolist()
+		while first <= last:
+				i = (first + last) / 2
+				# print(vertex)
+				if tolerantEquals(vertexList[i], vertex):
+						return i
+				elif vertexList[i] > vertex:
+						last = i - 1
+				elif vertexList[i] < vertex:
+						first = i + 1
+				else:
+						return None
 
 def tolerantEquals( v1, v2, tolerance=.00001 ):
 
@@ -121,7 +120,82 @@ def genTopology ( mesh ):
 
 
 def genClosedLoop( MeshTopology,  plane ):
-	pass
+	"""generates a closed loop from the intersection of a plane with a mesh"""
+	allIntPoints = []
+	vertexList = SortedList()
+	pairList = SortedList()
+
+	for i in MeshTopology.faces:
+		triangle = getTrianglefromIndex(MeshTopology, i)
+		intPoints = calcPlaneTriangleIntersection( plane, triangle )
+		if intPoints:
+				print(intPoints)
+				allIntPoints.append(intPoints)  
+
+	for pair in allIntPoints:
+		for vertex in pair:
+			j = tolerantBinarySearchVertexList( vertex, vertexList )
+			if (j == None):
+				vertexList.add(vertex.tolist())
+
+	for pair in allIntPoints:
+		pairInd = []
+		for vertex in pair:
+			j = tolerantBinarySearchVertexList( vertex, vertexList )
+			if (j != None):
+				pairInd.append(j)
+			else:
+				raise ValueError("Couldn't find vertex in list")
+
+		pairList.add(pairInd)
+
+	newList = recurseClosedLoop(pairList[0], pairList)
+
+	print(newList)
+	# c = newList.reshape(-1, newList.shape[-1])
+
+	# if np.array_equal(c[0],[-1]):
+	# 	print('all good. complete path')
+	# else:
+	# 	print('not complete path')
+
+	# c = c.tolist()
+	# d = list()
+	# for sublist in c:
+	# 	if sublist not in d:
+	# 		d.append(sublist)
+
+	# return d
+
+def getTrianglefromIndex ( MeshTopology, face):
+	"""Helper function for genClosedLoop. Returns vertices of triangles from an index"""
+	triangle = []
+	for i in face:
+		triangle.append(MeshTopology.vertices[i])
+	return triangle
+
+def recurseClosedLoop(first, pairList):
+	"""Helper function for genClosedLoop. Iterates over pairList to find closed loop"""
+	new = []
+	while pairList != []:
+		new.append(first)
+
+		if first in pairList:
+			pairList.remove(first)
+		else:
+			pairList.remove(list(reversed(first)))
+
+		for twoInts in pairList:
+			for point in twoInts:
+				if np.array_equal(point, first[1]):
+					if np.all(point == twoInts[1]):
+						print('reversed')
+						twoInts = list(reversed(twoInts))
+						new += recurseClosedLoop(twoInts, pairList)
+					else:
+						print('not reversed')
+						new += recurseClosedLoop(twoInts, pairList)
+	return new
 
 """
 Optional paramaters to be added later for toolpath generation.
@@ -175,11 +249,11 @@ def drawPoly ( polygon , ax ):
 	for poly in polygon:
 		x, y = poly.exterior.xy
 		ax.plot(x, y, color='#6699cc', alpha=0.7,
-		    linewidth=3, solid_capstyle='round', zorder=2)
+				linewidth=3, solid_capstyle='round', zorder=2)
 		for insidePolygon in poly.interiors:
 			x, y = insidePolygon.xy
 			ax.plot(x, y, color='#6699cc', alpha=0.7,
-		    linewidth=3, solid_capstyle='round', zorder=2)
+				linewidth=3, solid_capstyle='round', zorder=2)
 	return ax
 
 class Plane(object):
@@ -206,33 +280,42 @@ class MeshTopology(object):
 
 def main():
 	# Create a new plot
-	# figure = pyplot.figure()
-	# axes = mplot3d.Axes3D(figure)
+	figure = pyplot.figure()
+	axes = mplot3d.Axes3D(figure)
 
 	# Load the STL files and add the vectors to the plot
 	meshData = mesh.Mesh.from_file('cube.stl')
 
-	triangle = [[0,1,0], [1,1,0], [.5,.4,0]]
-	plane = Plane([0, .2, 0], [1, 1, 0])
+	triangle = [[0,0,0], [1,0,0], [.5,1,0]]
+	plane = Plane([0, .5, 0], [0, 1, 0])
+
 
 	for triangle in meshData.vectors:
 		intPoints = calcPlaneTriangleIntersection( plane, triangle )
 		print(intPoints)
+
 	# aList = [0,3,5,6,7,8,10]
 	# print(binary_search(aList, 10))
 	meshTopology = genTopology(meshData)
-	genToolPath( [] )
-	print(meshTopology.faces)
 	# print(meshTopology.adjacentFaces)
 
-	# axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
+	# allIntPoints = []
+	# for i in meshData.vectors:
+	# 	intPoints = calcPlaneTriangleIntersection(plane, i)
+	# 	if intPoints:
+	# 		print(intPoints)
+	# 		allIntPoints.append(intPoints) 
 
-	# # Auto scale to the mesh size
-	# scale = meshData.points.flatten(-1)
-	# axes.auto_scale_xyz(scale, scale, scale)
+	loop = genClosedLoop(meshTopology, plane)
+	print(loop)
 
+	axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
 
-	#ppyplot.show()
+	# Auto scale to the mesh size
+	scale = meshData.points.flatten(-1)
+	axes.auto_scale_xyz(scale, scale, scale)
+
+	# pyplot.show()
 
 if __name__ == '__main__':
 	main()
