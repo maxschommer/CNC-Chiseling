@@ -133,7 +133,7 @@ def genClosedLoop( MeshTopology,  plane ):
 		triangle = getTrianglefromIndex(MeshTopology, i)
 		intPoints = calcPlaneTriangleIntersection( plane, triangle )
 		if intPoints:
-				print(intPoints)
+				# print(intPoints)
 				allIntPoints.append(intPoints)  
 
 	for pair in allIntPoints:
@@ -155,21 +155,16 @@ def genClosedLoop( MeshTopology,  plane ):
 
 	newList = recurseClosedLoop(pairList[0], pairList)
 
-	print(newList)
-	# c = newList.reshape(-1, newList.shape[-1])
+	finalList = []
 
-	# if np.array_equal(c[0],[-1]):
-	# 	print('all good. complete path')
-	# else:
-	# 	print('not complete path')
+	for sublist in newList:
+		del sublist[-1]
+		for i in sublist:
+			finalList.append(i)
 
-	# c = c.tolist()
-	# d = list()
-	# for sublist in c:
-	# 	if sublist not in d:
-	# 		d.append(sublist)
+	d = getTrianglefromIndex(MeshTopology, finalList)
 
-	# return d
+	return d
 
 def getTrianglefromIndex ( MeshTopology, face):
 	"""Helper function for genClosedLoop. Returns vertices of triangles from an index"""
@@ -193,11 +188,9 @@ def recurseClosedLoop(first, pairList):
 			for point in twoInts:
 				if np.array_equal(point, first[1]):
 					if np.all(point == twoInts[1]):
-						print('reversed')
 						twoInts = list(reversed(twoInts))
 						new += recurseClosedLoop(twoInts, pairList)
 					else:
-						print('not reversed')
 						new += recurseClosedLoop(twoInts, pairList)
 	return new
 
@@ -301,14 +294,6 @@ def main():
 	# aList = [0,3,5,6,7,8,10]
 	# print(binary_search(aList, 10))
 	meshTopology = genTopology(meshData)
-	# print(meshTopology.adjacentFaces)
-
-	# allIntPoints = []
-	# for i in meshData.vectors:
-	# 	intPoints = calcPlaneTriangleIntersection(plane, i)
-	# 	if intPoints:
-	# 		print(intPoints)
-	# 		allIntPoints.append(intPoints) 
 
 	loop = genClosedLoop(meshTopology, plane)
 	print(loop)
