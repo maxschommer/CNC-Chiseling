@@ -49,3 +49,14 @@ python sendvplus.py
 8. 
 disable dry.run
 enable power
+
+# Running Slicer and CAM
+
+## Installs:
+
+Required packages can be installed via the following commands:
+
+"""
+sudo apt install python-tk
+sudo pip install numpy-stl bintrees sortedcontainers matplotlib shapely descartes
+"""
