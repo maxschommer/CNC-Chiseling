@@ -78,6 +78,7 @@ def dotProduct( v1, v2 ):
 	return v1.P1*v2.P1 + v1.P2*v2.P2 + v1.P3*v2.P3
 
 def genTopology ( mesh ):
+
 	vertexList = SortedList()
 	faceList = SortedList()
 
@@ -96,9 +97,9 @@ def genTopology ( mesh ):
 				face.append(j)
 			else:
 				raise ValueError("Couldn't find vertex in list")
-
 		faceList.add(face)
 		
+
 	adjacentFaceList = [0]*len(faceList)
 	for j, face in enumerate(faceList):
 		adjacentFaces = []
@@ -115,6 +116,8 @@ def genTopology ( mesh ):
 		adjacentFaceList[j] = adjacentFaces
 
 	return MeshTopology(adjacentFaceList, faceList, vertexList)
+
+
 
 def genClosedLoop( MeshTopology,  plane ):
 	"""generates a closed loop from the intersection of a plane with a mesh"""
@@ -188,21 +191,29 @@ def recurseClosedLoop(first, pairList):
 	return new
 
 """
-Optional paramaters to be added later for toolpath generation
+Optional paramaters to be added later for toolpath generation.
+Units are in Millimeters
 """
-def genToolPath( polygonList ):
-	polygonInside = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-	polygonOutside = [(-2, -2), (-2, 2), (2, 2), (2, -2)]
+def genToolPath( multiPoly, pathStepSize=12, initial_Offset=0 ):
+
+	polygonInside = [(-100, 0), (0, 100), (100, 0), (0, -100)]
+	polygonOutside = [(-200, -200), (-200, 200), (200, 200), (200, -200)]
 	# print(polygon.contains(Point(0.25, 0.05)))
+
+	polyList = []
 	poly = Polygon(polygonOutside, [polygonInside])
-	ax = drawPoly(poly, [])
 
-	for i in np.linspace(0, -.8, 6):
+	step = initial_Offset
+	while (1):
 
-		poly2 = Polygon(poly).buffer(i)
-		combinePolygons([poly, poly2])
-		ax = drawPoly(poly2, ax)
-
+		poly2 = Polygon(poly).buffer(step)
+		print(poly2)
+		if poly2.is_empty :
+			break
+		polyList.append(poly2)
+		step = step-pathStepSize
+		
+	ax = drawPoly(combinePolygons(polyList), [])
 	# print(polyBuffer)
 
 	ax.set_title('Polygon')
@@ -224,9 +235,9 @@ def drawPoly ( polygon , ax ):
 	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
 	if ax == []:
 		ax = fig.add_subplot(111)
-
-	if polygon.geom_type != "MultiPolygon":
-		polygon = [polygon]
+	if hasattr(polygon, "geom_type"):
+		if (polygon.geom_type != "MultiPolygon") or (type(polygon) == list) :
+			polygon = [polygon]
 
 	for poly in polygon:
 		x, y = poly.exterior.xy
@@ -270,6 +281,11 @@ def main():
 
 	triangle = [[0,0,0], [1,0,0], [.5,1,0]]
 	plane = Plane([0, .5, 0], [0, 1, 0])
+
+
+	for triangle in meshData.vectors:
+		intPoints = calcPlaneTriangleIntersection( plane, triangle )
+		print(intPoints)
 
 	# aList = [0,3,5,6,7,8,10]
 	# print(binary_search(aList, 10))
