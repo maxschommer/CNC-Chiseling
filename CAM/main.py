@@ -80,7 +80,6 @@ def dotProduct( v1, v2 ):
 
 def genTopology ( mesh ):
 
-
 	vertexList = SortedList()
 	faceList = SortedList()
 
@@ -99,9 +98,9 @@ def genTopology ( mesh ):
 				face.append(j)
 			else:
 				raise ValueError("Couldn't find vertex in list")
-
 		faceList.add(face)
 		
+
 	adjacentFaceList = [0]*len(faceList)
 	for j, face in enumerate(faceList):
 		adjacentFaces = []
@@ -119,25 +118,35 @@ def genTopology ( mesh ):
 
 	return MeshTopology(adjacentFaceList, faceList, vertexList)
 
+
+
 def genClosedLoop( MeshTopology,  plane ):
 	pass
 
 """
-Optional paramaters to be added later for toolpath generation
+Optional paramaters to be added later for toolpath generation.
+Units are in Millimeters
 """
-def genToolPath( polygonList ):
-	polygonInside = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-	polygonOutside = [(-2, -2), (-2, 2), (2, 2), (2, -2)]
+def genToolPath( multiPoly, pathStepSize=12, initial_Offset=0 ):
+
+	polygonInside = [(-100, 0), (0, 100), (100, 0), (0, -100)]
+	polygonOutside = [(-200, -200), (-200, 200), (200, 200), (200, -200)]
 	# print(polygon.contains(Point(0.25, 0.05)))
+
+	polyList = []
 	poly = Polygon(polygonOutside, [polygonInside])
-	ax = drawPoly(poly, [])
 
-	for i in np.linspace(0, -.8, 6):
+	step = initial_Offset
+	while (1):
 
-		poly2 = Polygon(poly).buffer(i)
-		combinePolygons([poly, poly2])
-		ax = drawPoly(poly2, ax)
-
+		poly2 = Polygon(poly).buffer(step)
+		print(poly2)
+		if poly2.is_empty :
+			break
+		polyList.append(poly2)
+		step = step-pathStepSize
+		
+	ax = drawPoly(combinePolygons(polyList), [])
 	# print(polyBuffer)
 
 	ax.set_title('Polygon')
@@ -159,9 +168,9 @@ def drawPoly ( polygon , ax ):
 	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
 	if ax == []:
 		ax = fig.add_subplot(111)
-
-	if polygon.geom_type != "MultiPolygon":
-		polygon = [polygon]
+	if hasattr(polygon, "geom_type"):
+		if (polygon.geom_type != "MultiPolygon") or (type(polygon) == list) :
+			polygon = [polygon]
 
 	for poly in polygon:
 		x, y = poly.exterior.xy
@@ -172,7 +181,6 @@ def drawPoly ( polygon , ax ):
 			ax.plot(x, y, color='#6699cc', alpha=0.7,
 		    linewidth=3, solid_capstyle='round', zorder=2)
 	return ax
-
 
 class Plane(object):
 	"""Describes a Plane"""
@@ -208,7 +216,6 @@ def main():
 	plane = Plane([0, .2, 0], [1, 1, 0])
 
 	for triangle in meshData.vectors:
-
 		intPoints = calcPlaneTriangleIntersection( plane, triangle )
 		print(intPoints)
 	# aList = [0,3,5,6,7,8,10]
