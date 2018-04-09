@@ -328,6 +328,9 @@ def combinePolygons( polygonList ):
 	return flattenedList
 
 def drawPoly ( polygon , ax ):
+	"""
+	Draws a polygon to ax.
+	"""
 	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
 	if ax == []:
 		ax = fig.add_subplot(111)
@@ -611,7 +614,7 @@ def main():
 	# print(binary_search(aList, 10))
 	meshTopology = genTopology(meshData)
 	segments = incrementalSlicing( meshTopology, slicePlanes, np.abs(slicePlanes[0].Point[2]-slicePlanes[1].Point[2]))
-	contourConstruction(segments[1])
+	contours = contourConstruction(segments[1])
 
 	targetObject = Object(meshData, meshTopology)
 
