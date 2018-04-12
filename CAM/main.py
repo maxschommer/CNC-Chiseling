@@ -15,8 +15,6 @@ from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box
 from shapely import affinity
 from descartes import PolygonPatch
 
-
-
 def main():
 	# Load the STL files and add the vectors to the plot
 	meshData = mesh.Mesh.from_file('shellLower.stl')
