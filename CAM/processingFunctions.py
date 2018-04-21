@@ -1,9 +1,12 @@
 import numpy as np
 import copy
 import objectDefinitions as oD
+from shapely.ops import nearest_points, cascaded_union
 from sortedcontainers import SortedList, SortedSet, SortedDict
-from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box
+from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box, MultiPoint
 import plotContours
+from matplotlib import pyplot
+from mpl_toolkits.mplot3d import Axes3D
 
 def calcPlaneTriangleIntersection( plane, triangle ):
 	pointSigns = [1 ,1, 1]
@@ -227,19 +230,6 @@ def genClosedLoop( MeshTopology,  plane):
 
 	return d
 
-def plotContoursT ( contours ):
-	ax = []
-	# for slicedContour in contours:
-
-	# 	vertices=(o.Coordinates for o in slicedContour)
-	# 	print(vertices)
-	# 	polygon = Polygon(vertices)
-	# 	ax = drawPoly(polygon, ax)
-
-	# ax.set_title('Polygon')
-	# pyplot.show()
-	# polygon = Poly(contours)
-
 
 def recurseClosedLoop(first, pairList):
 	"""Helper function for genClosedLoop. Iterates over pairList to find closed loop"""
@@ -264,32 +254,113 @@ def recurseClosedLoop(first, pairList):
 	return new
 
 """
+Converts a polygon to a list. If the polygon is a multipolygon or already a list
+it breaks it into a list of Polygon objects. If not, it returns a list containing the element
+poly.
+"""
+def polyToList( poly ):
+	
+	if (type(poly) == list) or poly.geom_type == "MultiPolygon" :
+		polyList = []
+		for internalPoly in poly:
+			polyList.append(Polygon(internalPoly.exterior.coords))
+			for interior in internalPoly.interiors:
+				polyList.append(Polygon(interior.coords))
+		return polyList
+	else:
+		polyList = []
+		for interior in poly.interiors:
+			polyList.append(Polygon(interior.coords))
+
+		if polyList:
+			polyList.append(Polygon(poly.exterior.coords))
+			return polyList
+		else:
+			return [poly]
+
+"""
 Optional paramaters to be added later for toolpath generation.
 Units are in Millimeters
 """
-def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False ):
-
-	# polygonInside = [(-100, 0), (0, 100), (100, 0), (0, -100)]
-	# polygonOutside = [(-200, -200), (-200, 200), (200, 200), (200, -200)]
-	# print(polygon.contains(Point(0.25, 0.05)))
+def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False, zHeight=0, topBounds=0 ):
 
 	polyList = []
 	step = initial_Offset
 	inc = 0
 	while (1):
 		inc += 1
-		poly2 = multiPoly.buffer(step)
-		if poly2.is_empty:
+		poly = multiPoly.buffer(step)
+		if poly.is_empty:
 			break
-		polyList.append(poly2)
+
+		polyList.append(polyToList(poly))
 		step = step-pathStepSize
-		# if inc == 3:
-		# 	break
 
-	res = plotContours.combinePolygons(polyList)
+	orderedPolyList = []
+	orderedPolyList.append(polyList[0].pop(0))
 
+	currPolyIndex = 0
+	while (1):
+		if not polyList:
+			break
+
+		if currPolyIndex + 1 == len(polyList):
+			if not polyList[0]:
+				polyList.pop(0)
+				currPolyIndex = currPolyIndex - 1
+				continue
+			orderedPolyList.append(polyList[0].pop(0))
+			currPolyIndex = 0
+			continue
+
+		for i, nextPoly in enumerate(polyList[currPolyIndex+1], 0):
+			if nextPoly.within(orderedPolyList[-1]):
+				orderedPolyList.append(polyList[currPolyIndex+1].pop(i))
+				break
+		currPolyIndex = currPolyIndex + 1
+
+	# print(orderedPolyList[0].exterior.coords[0])
+	x = np.array([])
+	y = np.array([])
+	z = np.array([])
+	for i, poly in enumerate(orderedPolyList[1::], 1):
+
+		x_, y_ = orderedPolyList[i-1].exterior.coords.xy
+		x = np.concatenate([x ,x_])if x.shape else x_
+		y = np.concatenate([y ,y_])if y.shape else y_
+		z = np.concatenate([z, np.full_like(x_, zHeight)])
+		closestIndex = findClosestPolyIndex(orderedPolyList[i].exterior.coords, 
+											orderedPolyList[i-1].exterior.coords[0])
+		orderedPolyList[i] = Polygon(orderedPolyList[i].exterior.coords[closestIndex:-1] +
+									 orderedPolyList[i].exterior.coords[0:closestIndex])
+		changePath = LineString([orderedPolyList[i-1].exterior.coords[0], orderedPolyList[i].exterior.coords[0]])
+
+		if changePath.crosses(multiPoly):
+
+			cx, cy = changePath.coords.xy
+			cz = np.full_like(cx, topBounds)
+			x = np.concatenate([x, cx])
+			y = np.concatenate([y, cy])
+			z = np.concatenate([z, cz])
+
+	x_, y_ = orderedPolyList[-1].exterior.coords.xy
+	x = np.concatenate([x ,x_])
+	y = np.concatenate([y ,y_])
+	z = np.concatenate([z, np.full_like(x_, zHeight)])
+
+	# polyList = orderedPolyList
+	# print(polyList)
+	# cmbd = plotContours.combinePolygons(objectPath)
+	# ax = plotContours.drawPoly(cmbd, [])
+	# 	# print(polyBuffer)
+
+	# orderedPolyList.append(multiPoly)
+	# res = plotContours.combinePolygons(orderedPolyList[0])
+	res = lambda: None
+	res.PolyList = orderedPolyList
+	res.XYZ = [x, y, z]
 	if plot:
-		ax = plotContours.drawPoly(res, [])
+		ax = plotContours.drawPoly(res.PolyList, [])
 		# print(polyBuffer)
 
 		ax.set_title('Polygon')
@@ -298,23 +369,53 @@ def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False ):
 	return res
 
 
-def genSlicePlanes( maxHeight, numPlanes, originCSys ):
+def generateToolOffsets( contourList, zSpacing ):
 	"""
-	Generates 'numPlanes' number of slicing planes with origins directly
-	above the originCSys. Note that this generates slicing planes in the Z Direction
+	Takes in a contour list (a list of polygons) that already
+	take overhangs into account (i.e., all n+m contours contain
+	the contour n) and generates a new contour list, where the resulting
+	contours prevent the tool from hitting previous layers. 
+	"""
+
+	# This assumes a cylindrical tool with a 90 degree conical tip.
+	toolDiameter = 6.35
+
+	maxOffset = toolDiameter/2
+
+	resContourList = copy.deepcopy(contourList)
+	for i, contour in enumerate(contourList, 0):
+		currOffset = zSpacing
+		buffList = []
+		n = 1
+		while currOffset < maxOffset and n <= i:
+			buffList.append(contourList[i-n].buffer(currOffset))
+			n = n + 1
+			currOffset = zSpacing*n
+
+		resContourList[i] = cascaded_union(buffList + [resContourList[i]])
+		# if buffList:
+		# 	resContourList[i] = buffList[-1]
+	return resContourList
+
+
+def genSlicePlanes( maxHeight, spacing, originCSys ):
+	"""
+	Generates a number of slicing planes with origins directly
+	above the originCSys, and are 'spacing' distance apart from eachother. 
+	Note that this generates slicing planes in the Z Direction
 	only, and for other axes of slicing, a transform and inverse transform should be 
 	used to move the model in and out of the correct coordinate system.
 	"""
+
 	planes = []
-	zHeights = np.linspace(originCSys.Point[2], originCSys.Point[2]+maxHeight, numPlanes)
+	# print(np.arange(originCSys.Point[2], originCSys.Point[2]+maxHeight, .8))
+	zHeights = np.arange(originCSys.Point[2], originCSys.Point[2]+maxHeight, spacing)
 
 	for zHeight in zHeights:
 		originPoint = copy.deepcopy(originCSys.Point)
 		originPoint[2] = zHeight
 		planes.append(oD.Plane(originPoint, [0, 0, 1]))
-	# print(planes)
 	return planes
-
 
 def contourConstruction( segmentList ):
 	segMap = {}
@@ -357,9 +458,6 @@ def contourConstruction( segmentList ):
 	# print(len(contours))
 	return contours
 
-
-	# print(segMap.values())
-
 def incrementalSlicing(meshTopology, planes, planeDelta):
 	triangleLists = splitTriangles( meshTopology, planes, planeDelta)
 	activeTriangles = set()
@@ -375,7 +473,6 @@ def incrementalSlicing(meshTopology, planes, planeDelta):
 				segments[i].append([oD.Vertex(intPoints[0]), oD.Vertex(intPoints[1])])
 
 	return segments
-
 
 def splitTriangles( meshTopology, planes, planeDelta):
 	triangleLists = [set() for i in range(len(planes)+1)]
@@ -393,7 +490,21 @@ def splitTriangles( meshTopology, planes, planeDelta):
 				j = int(np.floor((minT-planes[0].Point[2])/planeDelta) +1 )
 			triangleLists[j] = triangleLists[j].union([oD.Face(face, minT, maxT)])
 
-	return triangleLists
+ 	return triangleLists
+
+def findClosestPolyIndex( coords, point ):
+	minDist = float("inf")
+	minIndex = -1
+	for i, coord in enumerate(coords, 0):
+		newDist = dist(coord, point)
+		if newDist < minDist:
+			minIndex = i
+			minDist = newDist
+	# print(minIndex)
+	return minIndex	
+
+def dist(x,y):   
+    return np.sqrt((x[0]-y[0])**2 + (x[1]-y[1])**2)
 
 def getPolyDepth( multiPoly ):
 	"""
@@ -408,7 +519,6 @@ def getPolyDepth( multiPoly ):
 		poly.depth = 0
 		multiPolyList.append(poly)
 
-
 	for i, poly in enumerate(multiPolyList, 0):
 		if i == len(multiPolyList)-1:
 			break
@@ -420,15 +530,15 @@ def getPolyDepth( multiPoly ):
 	polygonGrouping = []
 	polyInteriors = []
 	for poly in multiPolyList:
-		print(poly.depth)
+		# print(poly.depth)
 		polyExterior = None
 
 		if poly.depth % 2 == 0:
 			polygonGrouping.append([poly, []])
-			print("Outside")
+			# print("Outside")
 		else:
 			polygonGrouping[-1][1].append(poly)
-			print("Inside")
+			# print("Inside")
 
 	# print(polygonGrouping)
 	polyResults = []

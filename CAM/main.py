@@ -1,5 +1,5 @@
 import numpy as np
-import plotContours
+import plot
 from objectDefinitions import *
 from processingFunctions import *
 import bintrees
@@ -12,30 +12,22 @@ from matplotlib import collections as mc
 from mpl_toolkits import mplot3d
 from matplotlib import pyplot
 from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box
+from shapely.ops import cascaded_union
 from shapely import affinity
 from descartes import PolygonPatch
 
 def main():
 	# Load the STL files and add the vectors to the plot
 	meshData = mesh.Mesh.from_file('shellLower.stl')
+	meshInfo = dataInfo(meshData) #Gets bounds of mesh
 
-	maxHeight = np.max(meshData.vectors[:, :, 2])
-	minHeight = np.min(meshData.vectors[:, :, 2])
-	meanHeight = np.mean(meshData.vectors[:, :, 2])
-
-	maxLength = np.max(meshData.vectors[:, :, 1])
-	minLength = np.min(meshData.vectors[:, :, 1])
-	meanLength = np.mean(meshData.vectors[:, :, 1])
-	
-
-	maxWidth = np.max(meshData.vectors[:, :, 0])
-	minWidth = np.min(meshData.vectors[:, :, 0])
-	meanWidth =np.mean(meshData.vectors[:, :, 0])
+	#Layer Height
+	zSpacing = 1.1
 
 	#Length, width, and height of the block to machine the part out of.
-	blockDimensions = [np.abs(maxLength-minLength) + 1, np.abs(maxWidth-minWidth) + 1, np.abs(maxHeight-minHeight) + 1 ] 
+	blockDimensions = [np.abs(meshInfo.maxY-meshInfo.minY) + 1, np.abs(meshInfo.maxX-meshInfo.minX) + 1, np.abs(meshInfo.maxZ-meshInfo.minZ) + 1 ] 
 
-	slicePlanes = genSlicePlanes(blockDimensions[2], 20, CSys([0,0, minHeight-1], [0,0,1], [1,0,0]))
+	slicePlanes = genSlicePlanes(blockDimensions[2], zSpacing, CSys([0,0, meshInfo.minZ-1], [0,0,1], [1,0,0]))
 
 	meshTopology = genTopology(meshData)
 	segments = incrementalSlicing( meshTopology, slicePlanes, np.abs(slicePlanes[0].Point[2]-slicePlanes[1].Point[2]))
@@ -44,9 +36,8 @@ def main():
 		if segment:
 			contourSlices.append(contourConstruction(segment))
 
-	
-	contourPlot = plotContours.ContourPlot(contourSlices)
-	contourPlot.plotContours()
+	# contourPlot = plot.ContourPlot(contourSlices)
+	# contourPlot.plotContours()
 
 	vertexSlices = []
 	for slicedContour in contourSlices:
@@ -55,20 +46,74 @@ def main():
 			vertices.append(Polygon(np.array([x.Coordinates[0:2] for x in contour])))
 		vertexSlices.append(vertices)
 
-	polygonOutside = box(minWidth-1, minLength-1, maxWidth+1, maxLength+1, ccw=True)
+	polygonOutside = box(meshInfo.minX-3, meshInfo.minY-3, meshInfo.maxX+3, meshInfo.maxY+3, ccw=True)
 
+	vertexSlices.reverse() #Make sure that the slices are going down
+
+	unionedPolyList = []
+	polyArr = []
+	for i, sliceGen in enumerate(vertexSlices, 0):
+		polyContourList = sorted(sliceGen, key=Within, reverse=True)
+
+		# Generate the unioned polygon list, which is used to prevent overhangs from
+		# being machined when there is material above the overhang that the tool will
+		# collide with.
+		if unionedPolyList:
+			unionedPolyList.append(cascaded_union([unionedPolyList[-1], 
+				getPolyDepth(MultiPolygon(polyContourList))]))
+		else:
+			unionedPolyList.append(getPolyDepth(MultiPolygon(polyContourList)))
+
+		if isinstance(unionedPolyList[-1], MultiPolygon):
+			unionedPolySublist = [polygon for polygon in unionedPolyList[-1]] 
+		else:
+			unionedPolySublist = [unionedPolyList[-1]]
+
+		#Generates the sliced polygon with correct 'inside' and 'outside' properties
+		poly = polygonOutside.difference(getPolyDepth(unionedPolySublist))
+		polyArr.append(poly)
+	
 	polyList = []
-	for sliceGen in vertexSlices:
-		poly = MultiPolygon([polygonOutside]+sliceGen)
-		poly = MultiPolygon(sorted(poly, key=Within, reverse=True))
-		poly = getPolyDepth( poly )
-		polyList.append(genToolPath( poly, pathStepSize=2))
+	x = []
+	y = []
+	z = []
+
+	#Generate toolpaths that account for the tool geometry
+	toolOffsets = generateToolOffsets(unionedPolyList, zSpacing)
+	for i, poly in enumerate(toolOffsets, 0):
+		poly = polygonOutside.difference(poly)
+		toolPaths = genToolPath( poly, pathStepSize=2, initial_Offset=0, 
+			zHeight=-i*zSpacing+(len(vertexSlices)+4)*zSpacing/2+meshInfo.meanZ, 
+			topBounds = meshInfo.maxZ-meshInfo.minZ+2)
+
+		x.append(toolPaths.XYZ[0])
+		y.append(toolPaths.XYZ[1])
+		z.append(toolPaths.XYZ[2])
+
+		polyList.append(toolPaths.PolyList)
 
 
-	vertex = Vertex([3,3,3])
-	# print(type(vertex) is Vertex)
-	contourPlot = plotContours.ContourPlot(polyList)
-	contourPlot.plotContours()
+	toolContours = plot.ContourPlot(toolOffsets)
+	toolContours.plot()
+
+
+	toolpathPlot = plot.toolPathSlicePlot([x, y, z])
+	toolpathPlot.meshInfo = meshInfo
+	toolpathPlot.plot()
+	xF = [item for sublist in x for item in sublist]
+	yF = [item for sublist in y for item in sublist]
+	zF = [item for sublist in z for item in sublist]
+
+	# toolPathAnimatedPlot = plot.toolPathCometPlot([xF, yF, zF])
+	# toolPathAnimatedPlot.plot()
+
+	# fig = pyplot.figure()
+	# ax = fig.gca(projection='3d')
+	# ax.set_title('3D Toolpath')
+	# ax.plot(xF, yF, zF)
+	# pyplot.show()
+
+
 	# ax = drawPoly(poly.buffer(-1), [])
 	# ax.set_title('Polygon')
 	# pyplot.show()
@@ -82,7 +127,7 @@ def main():
 
 	# axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
 
-	# Auto scale to the mesh size
+	# # Auto scale to the mesh size
 	# scale = meshData.points.flatten(-1)
 	# axes.auto_scale_xyz(scale, scale, scale)
 

@@ -1,6 +1,6 @@
 import numpy as np
 import objectDefinitions as oD
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pyplot
 from shapely.geometry import Polygon
 from matplotlib.widgets import Slider, Button, RadioButtons
 
@@ -18,7 +18,7 @@ def drawPoly ( polygon , ax ):
 	"""
 	Draws a polygon to ax.
 	"""
-	fig = plt.figure(1, figsize=(5,5), dpi=90)
+	fig = pyplot.figure(1, figsize=(5,5), dpi=90)
 	if ax == []:
 		ax = fig.add_subplot(111)
 
@@ -47,12 +47,12 @@ def getPolyXY ( polygon ):
 
 class ContourPlot(object):
 	"""docstring for ContourPlot"""
-	def __init__(self, contourSlices):
+	def __init__(self):
 		super(ContourPlot, self).__init__()
+		
+
+	def plotContours(self, contourSlices):
 		self.contourSlices = contourSlices
-
-	def plotContours(self):
-
 		self.slices = []
 
 		for slicedContour in self.contourSlices:
@@ -70,29 +70,70 @@ class ContourPlot(object):
 
 			self.slices.append([vertices_X, vertices_Y])
 
-		self.fig, ax = plt.subplots()
-		plt.subplots_adjust(left=0.25, bottom=0.25)
+		self.fig, ax = pyplot.subplots()
+		pyplot.subplots_adjust(left=0.25, bottom=0.25)
 
-		self.l, = plt.plot(self.slices[0][0], self.slices[0][1], lw=2, color='red')
+		self.l, = pyplot.plot(self.slices[0][0], self.slices[0][1], lw=2, color='red')
 
-		plt.axis([np.min(vertices_X)-5, np.max(vertices_X)+5, np.min(vertices_Y)-5, np.max(vertices_Y)+5])
-
+		pyplot.axis([np.min(vertices_X)-5, np.max(vertices_X)+5, np.min(vertices_Y)-5, np.max(vertices_Y)+5])
+		# pyplot.axis([-30, 70, -70, 30])
 		axcolor = 'lightgoldenrodyellow'
 
-		layerNum = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+		layerNum = pyplot.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 
 		self.layer = Slider(layerNum, 'Layer Number', 0, len(self.slices)-1, valinit=0, valstep=1)
 
-		self.layer.on_changed(self.update)
+		self.layer.on_changed(self.updateContour)
 
+		# print(len(vertices_X))
+		pyplot.show()
 
-		plt.show()
+	def plotToolPaths(self, toolpathSlices):
+		self.toolpathSlices = toolpathSlices
+		vertices_X = self.toolpathSlices[0]
+		vertices_Y = self.toolpathSlices[1]
+		vertices_Z = self.toolpathSlices[2]
 
+		self.fig = pyplot.figure()
+		ax = self.fig.gca(projection='3d')
+		# ax.set_title('3D Toolpath')
+		# ax.plot(x, y, z)
+		# pyplot.show()
+		# raw_input()
+		# self.fig, ax = pyplot.subplots()
+		pyplot.subplots_adjust(left=0.25, bottom=0.25)
 
-	def update(self, val):
+		self.l, = pyplot.plot(vertices_X[0], vertices_Y[0], vertices_Z[0], lw=2, color='red')
+
+		pyplot.axis([np.min(vertices_X[0])-5, np.max(vertices_X[0])+5, np.min(vertices_Y[0])-5, np.max(vertices_Y[0])+5])
+		# pyplot.axis([-30, 70, -70, 30])
+		axcolor = 'lightgoldenrodyellow'
+
+		layerNum = pyplot.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+
+		self.layer = Slider(layerNum, 'Layer Number', 0, len(vertices_X)-1, valinit=0, valstep=1)
+
+		self.layer.on_changed(self.updateToolpaths)
+
+		# print(len(vertices_X))
+		pyplot.show()
+
+	def updateContour(self, val):
 		print(val)
+		# print(len(self.slices[int(val)][0]))
 		self.l.set_xdata(self.slices[int(val)][0])
 		self.l.set_ydata(self.slices[int(val)][1])
 		self.fig.canvas.draw_idle()
 
 
+	def updateToolpaths(self, val):
+		print(val)
+		print(len(self.toolpathSlices[0][int(val)]))
+		print(len(self.toolpathSlices[1][int(val)]))
+		print(len(self.toolpathSlices[2][int(val)]))
+		self.l.set_xdata(self.toolpathSlices[0][int(val)])
+		self.l.set_ydata(self.toolpathSlices[1][int(val)])
+		self.l.set_3d_properties(zs=self.toolpathSlices[2][int(val)])
+		
+		# self.l.set_zdata(self.toolpathSlices[int(val)][2])
+		self.fig.canvas.draw_idle()

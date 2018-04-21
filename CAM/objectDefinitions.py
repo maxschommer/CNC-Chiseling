@@ -2,6 +2,27 @@ import numpy as np
 import processingFunctions as pF
 
 
+
+class dataInfo(object):
+	"""Contains mean of data and extents"""
+	def __init__(self, meshData):
+		super(dataInfo, self).__init__()
+		self.maxZ = np.max(meshData.vectors[:, :, 2])
+		self.minZ = np.min(meshData.vectors[:, :, 2])
+		self.meanZ = np.mean(meshData.vectors[:, :, 2])
+
+		self.maxY = np.max(meshData.vectors[:, :, 1])
+		self.minY = np.min(meshData.vectors[:, :, 1])
+		self.meanY = np.mean(meshData.vectors[:, :, 1])
+		
+		self.maxX = np.max(meshData.vectors[:, :, 0])
+		self.minX = np.min(meshData.vectors[:, :, 0])
+		self.meanX =np.mean(meshData.vectors[:, :, 0])
+
+		self.max_range = np.array([self.maxX-self.minX, self.maxY-self.minY, self.maxZ-self.minZ]).max() / 2.0
+
+		self.meshData = meshData
+
 class Object(object):
 	"""Describes an object to machine. Contins information about topology,
 	mesh and voxel representation of what has been machined"""
@@ -129,7 +150,6 @@ class MeshTopology(object):
 	def findMinMaxZ(self, triangle):
 		triangle = np.asarray(triangle)
 		return [np.min(triangle[:,2], 0), np.max(triangle[:,2], 0)]
-
 
 
 
