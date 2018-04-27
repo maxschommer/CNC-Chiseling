@@ -1,3 +1,4 @@
+import paramaters as params
 import numpy as np
 import copy
 import objectDefinitions as oD
@@ -142,7 +143,6 @@ def genTopology ( mesh ):
 	ind = 0
 
 	for triangle in mesh.vectors:
-		# print(ind)
 		ind += 1
 		for vertex in triangle:
 			j = tolerantBinarySearchVertexList( vertex, vertexList )
@@ -151,7 +151,6 @@ def genTopology ( mesh ):
 
 	ind = 0
 	for triangle in mesh.vectors:
-		# print(ind)
 		ind += 1
 		face = []
 		for vertex in triangle:
@@ -165,93 +164,6 @@ def genTopology ( mesh ):
 
 	return oD.MeshTopology(faceList, vertexList)
 
-
-def genClosedLoop( MeshTopology,  plane):
-	"""generates a closed loop from the intersection of a plane with a mesh"""
-	allIntPoints = []
-	vertexList = SortedList(key=cmp_to_key(tolerantCompare))
-	pairList = SortedList()
-
-	for i in MeshTopology.faces:
-		triangle = MeshTopology.getTrianglefromIndex(i)
-		intPoints = calcPlaneTriangleIntersection( plane, triangle )
-		
-		if intPoints:
-			# print(intPoints)
-			allIntPoints.append(intPoints)
-	# tolerantBinarySearchVertexList([-14.88553333, 5.,-21.80109953], allIntPoints )
-	for pair in allIntPoints:
-		for vertex in pair:
-			j = tolerantLinearSearch( vertex, vertexList )
-			k = tolerantBinarySearchVertexList( vertex, vertexList )
-			if j != k:
-				tolerantBinarySearchVertexList(vertex, vertexList, True)
-				print("J = %s, K = %s" % (j, k))
-				print("Vertex : %s" %vertex)
-			if (j == None):
-				if (not isinstance(vertex, list)):
-					vertex = vertex.tolist()
-				vertexList.add(vertex)
-	# for vertex in vertexList:
-	# 	if (not isinstance(vertex, list)):
-	# 		print("LOL")
-	# 		return False
-	for pair in allIntPoints:
-		pairInd = []
-
-		for vertex in pair:
-			if (not isinstance(vertex, list)):
-				vertex = vertex.tolist()
-			j = tolerantLinearSearch( vertex, vertexList )
-			if (j != None):
-				pairInd.append(j)
-			else:
-				print(j)
-				print("Attempting Linear Search Pair: ")
-				print(tolerantLinearSearch(vertex, allIntPoints))
-				print(tolerantBinarySearchVertexList(vertex, allIntPoints))
-				print(vertex)
-				print("Linear Search Pair Complete")
-				raise ValueError("Couldn't find vertex in list")
-
-		pairList.add(pairInd)
-
-	print(pairList)
-	newList = recurseClosedLoop(pairList[0], pairList)
-
-	finalList = []
-
-	for sublist in newList:
-		del sublist[-1]
-		for i in sublist:
-			finalList.append(i)
-
-	d = meshTopology.getTrianglefromIndex(finalList)
-
-	return d
-
-
-def recurseClosedLoop(first, pairList):
-	"""Helper function for genClosedLoop. Iterates over pairList to find closed loop"""
-	new = []
-	while pairList != []:
-		new.append(first)
-
-		if first in pairList:
-			pairList.remove(first)
-		else:
-			print(pairList)
-			pairList.remove(list(reversed(first)))
-
-		for twoInts in pairList:
-			for point in twoInts:
-				if np.array_equal(point, first[1]):
-					if np.all(point == twoInts[1]):
-						twoInts = list(reversed(twoInts))
-						new += recurseClosedLoop(twoInts, pairList)
-					else:
-						new += recurseClosedLoop(twoInts, pairList)
-	return new
 
 """
 Converts a polygon to a list. If the polygon is a multipolygon or already a list
@@ -282,20 +194,22 @@ def polyToList( poly ):
 Optional paramaters to be added later for toolpath generation.
 Units are in Millimeters
 """
-def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False, zHeight=0, topBounds=0 ):
+def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, zHeight=0, topBounds=0, bufferRes=4 ):
 
 	polyList = []
 	step = initial_Offset
 	inc = 0
 	while (1):
 		inc += 1
-		poly = multiPoly.buffer(step)
+		poly = multiPoly.buffer(step, resolution=bufferRes)
 		if poly.is_empty:
 			break
 
 		polyList.append(polyToList(poly))
 		step = step-pathStepSize
 
+	if polyList == []:
+		return False
 	orderedPolyList = []
 	orderedPolyList.append(polyList[0].pop(0))
 
@@ -319,7 +233,6 @@ def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False, zHeigh
 				break
 		currPolyIndex = currPolyIndex + 1
 
-	# print(orderedPolyList[0].exterior.coords[0])
 	x = np.array([])
 	y = np.array([])
 	z = np.array([])
@@ -335,7 +248,7 @@ def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False, zHeigh
 									 orderedPolyList[i].exterior.coords[0:closestIndex])
 		changePath = LineString([orderedPolyList[i-1].exterior.coords[0], orderedPolyList[i].exterior.coords[0]])
 
-		if changePath.crosses(multiPoly):
+		if changePath.crosses(multiPoly) or not multiPoly.contains(changePath):
 
 			cx, cy = changePath.coords.xy
 			cz = np.full_like(cx, topBounds)
@@ -348,28 +261,14 @@ def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, plot=False, zHeigh
 	y = np.concatenate([y ,y_])
 	z = np.concatenate([z, np.full_like(x_, zHeight)])
 
-	# polyList = orderedPolyList
-	# print(polyList)
-	# cmbd = plotContours.combinePolygons(objectPath)
-	# ax = plotContours.drawPoly(cmbd, [])
-	# 	# print(polyBuffer)
-
-	# orderedPolyList.append(multiPoly)
-	# res = plotContours.combinePolygons(orderedPolyList[0])
 	res = lambda: None
 	res.PolyList = orderedPolyList
 	res.XYZ = [x, y, z]
-	if plot:
-		ax = plotContours.drawPoly(res.PolyList, [])
-		# print(polyBuffer)
-
-		ax.set_title('Polygon')
-		pyplot.show()
 
 	return res
 
 
-def generateToolOffsets( contourList, zSpacing ):
+def generateToolOffsets( contourList, zSpacing, bufferRes=4):
 	"""
 	Takes in a contour list (a list of polygons) that already
 	take overhangs into account (i.e., all n+m contours contain
@@ -378,17 +277,19 @@ def generateToolOffsets( contourList, zSpacing ):
 	"""
 
 	# This assumes a cylindrical tool with a 90 degree conical tip.
-	toolDiameter = 6.35
 
-	maxOffset = toolDiameter/2
+	maxOffset = params.TOOL_DIAMETER/2
 
 	resContourList = copy.deepcopy(contourList)
 	for i, contour in enumerate(contourList, 0):
 		currOffset = zSpacing
 		buffList = []
 		n = 1
-		while currOffset < maxOffset and n <= i:
-			buffList.append(contourList[i-n].buffer(currOffset))
+		while n <= i:
+			if currOffset > maxOffset:
+				currOffset = maxOffset
+				n = i # Set this so that the loop breaks after this round is completed
+			buffList.append(contourList[i-n].buffer(currOffset, resolution=bufferRes))
 			n = n + 1
 			currOffset = zSpacing*n
 
@@ -408,7 +309,6 @@ def genSlicePlanes( maxHeight, spacing, originCSys ):
 	"""
 
 	planes = []
-	# print(np.arange(originCSys.Point[2], originCSys.Point[2]+maxHeight, .8))
 	zHeights = np.arange(originCSys.Point[2], originCSys.Point[2]+maxHeight, spacing)
 
 	for zHeight in zHeights:
@@ -436,27 +336,26 @@ def contourConstruction( segmentList ):
 		else:
 			segMap[v] = [segMap[v][0], u]
 
-	# print(len(segMap))
 	while segMap:
 		points = []
 		points.append(segMap.keys()[0])
 		[p, last] = segMap.pop(points[0])
 		points.append(p)
-		# print(segMap)
+
 		j = 1
 		while points[j-1].__hash__() != last.__hash__():
+
 			[u, v] = segMap.pop(points[j])
+
 			if tolerantEquals(u.Coordinates, points[j-1].Coordinates):
 				points.append(v)
 			else:
 				points.append(u)
 			j += 1
 		contours.append(points)
-		# print(len(contours[0]))
-		# print(len(segMap.keys()))
-		
-	# print(len(contours))
+
 	return contours
+
 
 def incrementalSlicing(meshTopology, planes, planeDelta):
 	triangleLists = splitTriangles( meshTopology, planes, planeDelta)
@@ -490,7 +389,7 @@ def splitTriangles( meshTopology, planes, planeDelta):
 				j = int(np.floor((minT-planes[0].Point[2])/planeDelta) +1 )
 			triangleLists[j] = triangleLists[j].union([oD.Face(face, minT, maxT)])
 
- 	return triangleLists
+	return triangleLists
 
 def findClosestPolyIndex( coords, point ):
 	minDist = float("inf")
@@ -500,7 +399,6 @@ def findClosestPolyIndex( coords, point ):
 		if newDist < minDist:
 			minIndex = i
 			minDist = newDist
-	# print(minIndex)
 	return minIndex	
 
 def dist(x,y):   
@@ -530,17 +428,14 @@ def getPolyDepth( multiPoly ):
 	polygonGrouping = []
 	polyInteriors = []
 	for poly in multiPolyList:
-		# print(poly.depth)
+
 		polyExterior = None
 
 		if poly.depth % 2 == 0:
 			polygonGrouping.append([poly, []])
-			# print("Outside")
 		else:
 			polygonGrouping[-1][1].append(poly)
-			# print("Inside")
 
-	# print(polygonGrouping)
 	polyResults = []
 	for polygon in polygonGrouping:
 
@@ -553,6 +448,4 @@ def getPolyDepth( multiPoly ):
 		else:
 			polyResults.append(polygon[0])
 
-	# print(Polygon(polygonGrouping[0][0], polygonGrouping[0][1]))
-	# print(MultiPolygon(polyResults))
 	return MultiPolygon(polyResults)

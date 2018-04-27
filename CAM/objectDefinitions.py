@@ -1,6 +1,22 @@
 import numpy as np
 import processingFunctions as pF
 
+class BLOCK(object):
+	"""A Block definition with constructors to define useful locations"""
+	def __init__(self, CENTER, DIMENSIONS):
+		super(BLOCK, self).__init__()
+		self.CENTER = CENTER
+		self.DIMENSIONS = DIMENSIONS
+
+		self.Z_MAX = self.CENTER[2]+self.DIMENSIONS[2]/2
+		self.Z_MIN = self.CENTER[2]-self.DIMENSIONS[2]/2
+
+		self.Y_MAX = self.CENTER[1]+self.DIMENSIONS[1]/2
+		self.Y_MIN = self.CENTER[1]-self.DIMENSIONS[1]/2
+
+		self.X_MAX = self.CENTER[0]+self.DIMENSIONS[0]/2
+		self.X_MIN = self.CENTER[0]-self.DIMENSIONS[0]/2
+
 
 
 class dataInfo(object):
@@ -9,19 +25,21 @@ class dataInfo(object):
 		super(dataInfo, self).__init__()
 		self.maxZ = np.max(meshData.vectors[:, :, 2])
 		self.minZ = np.min(meshData.vectors[:, :, 2])
-		self.meanZ = np.mean(meshData.vectors[:, :, 2])
+		self.meanZ = (self.maxZ+self.minZ)/2
 
 		self.maxY = np.max(meshData.vectors[:, :, 1])
 		self.minY = np.min(meshData.vectors[:, :, 1])
-		self.meanY = np.mean(meshData.vectors[:, :, 1])
+		self.meanY = (self.maxY+self.minY)/2
 		
 		self.maxX = np.max(meshData.vectors[:, :, 0])
 		self.minX = np.min(meshData.vectors[:, :, 0])
-		self.meanX =np.mean(meshData.vectors[:, :, 0])
+		self.meanX = (self.maxX+self.minX)/2
 
 		self.max_range = np.array([self.maxX-self.minX, self.maxY-self.minY, self.maxZ-self.minZ]).max() / 2.0
 
 		self.meshData = meshData
+
+
 
 class Object(object):
 	"""Describes an object to machine. Contins information about topology,
@@ -61,15 +79,15 @@ class Segment(object):
 	each are endpoints of a segment.The vertices are rounded to precision
 	decimal places.
 	"""
-	def __init__(self, P1, P2, precision = 5):
+	def __init__(self, P1, P2, precision = 7):
 		super(Segment, self).__init__()
 		self.P1 = np.round(P1, precision)
 		self.P2 = np.round(P2, precision)
 		self.precision = precision
 
 	def __hash__(self):
-		return (self.P1[0]*10**self.precision + self.P1[1]*10**self.precision + self.P1[2]*10**self.precision
-			  + self.P2[0]*10**self.precision + self.P2[1]*10**self.precision + self.P2[2]*10**self.precision)
+		return (self.P1[0]*5**self.precision + self.P1[1]*8**self.precision + self.P1[2]*12**self.precision
+			  + self.P2[0]*5**self.precision + self.P2[1]*8**self.precision + self.P2[2]*12**self.precision)
 
 	def __eq__(self, other):
 		return pF.tolerantEquals(self.P1, other.P1) and tolerantEquals(self.P2, other.P2)
@@ -83,13 +101,13 @@ class Vertex(object):
 	is a list of x, y, z coordinates for one vertex. The coordinatess are rounded to precision
 	decimal places.
 	"""
-	def __init__(self, Coordinates, precision = 5):
+	def __init__(self, Coordinates, precision = 9):
 		super(Vertex, self).__init__()
 		self.Coordinates = np.round(Coordinates, precision)
 		self.precision = precision
 
 	def __hash__(self):
-		return int(np.abs(self.Coordinates[0]*10**self.precision*10**(15-self.precision) + self.Coordinates[1]*10**self.precision + self.Coordinates[2]*10**self.precision))
+		return int(np.abs(self.Coordinates[0]*(10**self.precision)*10**(15-self.precision) + self.Coordinates[1]*10**self.precision + self.Coordinates[2]*10**self.precision))
 
 	def __eq__(self, other):
 		return pF.tolerantEquals(self.Coordinates, other.Coordinates)
@@ -133,6 +151,7 @@ class MeshTopology(object):
 		self.faces = faces
 		self.vertices = vertices
 		self.minMaxList = self.createMinMaxList()
+
 	def createMinMaxList( self ):
 		minMaxList = []
 		for face in self.faces:

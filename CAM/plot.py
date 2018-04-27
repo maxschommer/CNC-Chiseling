@@ -58,12 +58,11 @@ class ContourPlot(object):
 		self.slices = []
 
 		for slicedContour in self.contourSlices:
-
-
+			if not slicedContour:
+				continue
 			vertices_X = np.array([])
 			vertices_Y = np.array([])
 			if isinstance(slicedContour, list) and type(slicedContour[0]) is not Polygon:
-				# print(type(slicedContour[0]))
 				for contours in slicedContour:
 					vertices = np.array([x.Coordinates[0:2] for x in contours])
 					vertices_X = np.concatenate((vertices_X , vertices[:, 0]))
@@ -72,8 +71,6 @@ class ContourPlot(object):
 
 				vertices_X, vertices_Y = getPolyXY(combinePolygons(slicedContour))
 			else:
-				# print(slicedContour)
-
 				vertices_X, vertices_Y = getPolyXY(slicedContour)
 
 			self.slices.append([vertices_X, vertices_Y])
@@ -93,13 +90,11 @@ class ContourPlot(object):
 
 		self.layer.on_changed(self.update)
 
-		# print(len(vertices_X))
-		pyplot.show()
+
+		# pyplot.show()
 
 
 	def update(self, val):
-		print(val)
-		# print(len(self.slices[int(val)][0]))
 		self.l.set_xdata(self.slices[int(val)][0])
 		self.l.set_ydata(self.slices[int(val)][1])
 		self.fig.canvas.draw_idle()
@@ -123,10 +118,8 @@ class toolPathSlicePlot(object):
 		axcolor = 'lightgoldenrodyellow'
 
 		pyplot.subplots_adjust(left=0.25, bottom=0.25)
-		print(self.meshInfo.meanZ)
 		self.l, = pyplot.plot(vertices_X[0], vertices_Y[0], vertices_Z[0], lw=2, color='red')
 		if self.meshInfo:
-			print("Got info!")
 			ax.set_xlim(self.meshInfo.meanX - self.meshInfo.max_range, self.meshInfo.meanX + self.meshInfo.max_range)
 			ax.set_ylim(self.meshInfo.meanY - self.meshInfo.max_range, self.meshInfo.meanY + self.meshInfo.max_range)
 			ax.set_zlim(self.meshInfo.meanZ - self.meshInfo.max_range, self.meshInfo.meanZ + self.meshInfo.max_range)
@@ -152,8 +145,7 @@ class toolPathSlicePlot(object):
 
 		self.layer.on_changed(self.update)
 
-		# print(len(vertices_X))
-		pyplot.show()
+		# pyplot.show()
 
 	def buttonCallback(self,event):
 		self.isVisible = not self.isVisible
@@ -192,14 +184,13 @@ class toolPathCometPlot(object):
 							  self.vertices_Z[10:self.startVal], lw=.25, color='red')
 
 		if self.meshInfo:
-			print("Got info!")
+
 			ax.set_xlim(self.meshInfo.meanX - self.meshInfo.max_range, self.meshInfo.meanX + self.meshInfo.max_range)
 			ax.set_ylim(self.meshInfo.meanY - self.meshInfo.max_range, self.meshInfo.meanY + self.meshInfo.max_range)
 			ax.set_zlim(self.meshInfo.meanZ - self.meshInfo.max_range, self.meshInfo.meanZ + self.meshInfo.max_range)
 		else:
 			pyplot.axis([np.min(self.vertices_X)-5, np.max(self.vertices_X)+5, 
 						 np.min(self.vertices_Y)-5, np.max(self.vertices_Y)+5])
-		# pyplot.axis([-30, 70, -70, 30])
 		axcolor = 'lightgoldenrodyellow'
 
 		moveNum = pyplot.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
@@ -207,11 +198,9 @@ class toolPathCometPlot(object):
 		self.move = Slider(moveNum, 'Move Number', 0, len(self.vertices_X)-1, valinit=0, valstep=1)
 
 		self.move.on_changed(self.update)
-		pyplot.show()
+		# pyplot.show()
 
 	def update(self, val):
-		print(val)
-
 		if val > 200:
 			self.startVal =  int(val - 200)
 		
@@ -223,5 +212,4 @@ class toolPathCometPlot(object):
 		self.lThin.set_ydata(self.vertices_Y[0:self.startVal])
 		self.lThin.set_3d_properties(zs=self.vertices_Z[0:self.startVal])
 		
-		# self.l.set_zdata(self.toolpathSlices[int(val)][2])
 		self.fig.canvas.draw_idle()

@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import plot
 from objectDefinitions import *
@@ -8,7 +9,7 @@ import copy
 import time
 import pylab as pl
 from matplotlib import collections as mc
-
+import paramaters as params
 from mpl_toolkits import mplot3d
 from matplotlib import pyplot
 from shapely.geometry import Polygon, Point, LineString, MultiPolygon, box
@@ -16,28 +17,39 @@ from shapely.ops import cascaded_union
 from shapely import affinity
 from descartes import PolygonPatch
 
-def main():
+def main( meshFile, outputFile="out.txt" ):
 	# Load the STL files and add the vectors to the plot
-	meshData = mesh.Mesh.from_file('shellLower.stl')
+	meshData = mesh.Mesh.from_file(meshFile)
+	meshData.vectors = meshData.vectors + params.ZERO_OFFSET # Move the mesh into position
+
 	meshInfo = dataInfo(meshData) #Gets bounds of mesh
 
-	#Layer Height
-	zSpacing = 1.1
+	blockCenter = params.BLOCK_CENTER
+
+	if params.MV_BLOCK:
+		blockCenter = blockCenter + params.ZERO_OFFSET
+
+	Block = BLOCK(blockCenter, params.BLOCK_DIMENSIONS)
 
 	#Length, width, and height of the block to machine the part out of.
-	blockDimensions = [np.abs(meshInfo.maxY-meshInfo.minY) + 1, np.abs(meshInfo.maxX-meshInfo.minX) + 1, np.abs(meshInfo.maxZ-meshInfo.minZ) + 1 ] 
+	blockDimensions = params.BLOCK_DIMENSIONS
 
-	slicePlanes = genSlicePlanes(blockDimensions[2], zSpacing, CSys([0,0, meshInfo.minZ-1], [0,0,1], [1,0,0]))
+	slicePlanes = genSlicePlanes(blockDimensions[2], params.Z_SPACING, CSys([0,0, Block.Z_MIN], [0,0,1], [1,0,0]))
+
+
+	# Round planes and vertices so they don't intersect
+	for plane in slicePlanes:
+		plane.Point[2] = np.around(plane.Point[2], decimals=4)+.00005
 
 	meshTopology = genTopology(meshData)
-	segments = incrementalSlicing( meshTopology, slicePlanes, np.abs(slicePlanes[0].Point[2]-slicePlanes[1].Point[2]))
+	for i, vertex in enumerate(meshTopology.vertices, 0):
+		meshTopology.vertices[i][2] = np.around(vertex[2], decimals=4)
+
+	# Slice mesh and generate contours
+	segments = incrementalSlicing( meshTopology, slicePlanes, params.Z_SPACING)
 	contourSlices = []
 	for segment in segments:
-		if segment:
-			contourSlices.append(contourConstruction(segment))
-
-	# contourPlot = plot.ContourPlot(contourSlices)
-	# contourPlot.plotContours()
+		contourSlices.append(contourConstruction(segment))
 
 	vertexSlices = []
 	for slicedContour in contourSlices:
@@ -46,7 +58,7 @@ def main():
 			vertices.append(Polygon(np.array([x.Coordinates[0:2] for x in contour])))
 		vertexSlices.append(vertices)
 
-	polygonOutside = box(meshInfo.minX-3, meshInfo.minY-3, meshInfo.maxX+3, meshInfo.maxY+3, ccw=True)
+	polygonOutside = box(Block.X_MIN, Block.Y_MIN, Block.X_MAX, Block.Y_MAX, ccw=True)
 
 	vertexSlices.reverse() #Make sure that the slices are going down
 
@@ -72,66 +84,64 @@ def main():
 		#Generates the sliced polygon with correct 'inside' and 'outside' properties
 		poly = polygonOutside.difference(getPolyDepth(unionedPolySublist))
 		polyArr.append(poly)
-	
+
 	polyList = []
+
+	toolPathList = []
+	#Generate toolpaths that account for the tool geometry
+	toolOffsets = generateToolOffsets(unionedPolyList, params.Z_SPACING, bufferRes=params.BUFFER_RES)
+	for i, poly in enumerate(toolOffsets, 0):
+		poly = polygonOutside.difference(poly)
+		toolPaths = genToolPath( poly, pathStepSize=params.PATH_STEP_SIZE, initial_Offset=params.PATH_INITIAL_OFFSET, 
+			zHeight=-i*params.Z_SPACING + Block.Z_MAX, 
+			topBounds = Block.Z_MAX+params.SAFE_HEIGHT)
+		if not toolPaths:
+			continue
+
+		toolPathList.append(toolPaths)
+		polyList.append(toolPaths.PolyList)
+
 	x = []
 	y = []
 	z = []
+	for i, toolPath in enumerate(toolPathList, 0):
+		x.append(toolPath.XYZ[0])
+		y.append(toolPath.XYZ[1])
+		z.append(toolPath.XYZ[2])
 
-	#Generate toolpaths that account for the tool geometry
-	toolOffsets = generateToolOffsets(unionedPolyList, zSpacing)
-	for i, poly in enumerate(toolOffsets, 0):
-		poly = polygonOutside.difference(poly)
-		toolPaths = genToolPath( poly, pathStepSize=2, initial_Offset=0, 
-			zHeight=-i*zSpacing+(len(vertexSlices)+4)*zSpacing/2+meshInfo.meanZ, 
-			topBounds = meshInfo.maxZ-meshInfo.minZ+2)
+		if i == len(toolPathList) - 1:
+			break
 
-		x.append(toolPaths.XYZ[0])
-		y.append(toolPaths.XYZ[1])
-		z.append(toolPaths.XYZ[2])
+		xs = np.array([x[-1][-1], toolPathList[i+1].XYZ[0][0]])
+		ys = np.array([y[-1][-1] , toolPathList[i+1].XYZ[1][0]])
+		zs = np.array([Block.Z_MAX+params.SAFE_HEIGHT, Block.Z_MAX+params.SAFE_HEIGHT])
+		x[-1] = np.concatenate([x[-1], xs])
+		y[-1] = np.concatenate([y[-1], ys])
+		z[-1] = np.concatenate([z[-1], zs])
 
-		polyList.append(toolPaths.PolyList)
+	xF = np.array([item for sublist in x for item in sublist]) 
+	yF = np.array([item for sublist in y for item in sublist])
+	zF = np.array([item for sublist in z for item in sublist])
 
+	file = open(outputFile, 'w')
+	pickle.dump([xF, yF, zF], file)
+	file.close()
 
 	toolContours = plot.ContourPlot(toolOffsets)
 	toolContours.plot()
 
-
 	toolpathPlot = plot.toolPathSlicePlot([x, y, z])
 	toolpathPlot.meshInfo = meshInfo
 	toolpathPlot.plot()
-	xF = [item for sublist in x for item in sublist]
-	yF = [item for sublist in y for item in sublist]
-	zF = [item for sublist in z for item in sublist]
 
-	# toolPathAnimatedPlot = plot.toolPathCometPlot([xF, yF, zF])
-	# toolPathAnimatedPlot.plot()
+	toolPathAnimatedPlot = plot.toolPathCometPlot([xF, yF, zF])
+	toolPathAnimatedPlot.meshInfo = meshInfo
+	toolPathAnimatedPlot.plot()
 
-	# fig = pyplot.figure()
-	# ax = fig.gca(projection='3d')
-	# ax.set_title('3D Toolpath')
-	# ax.plot(xF, yF, zF)
-	# pyplot.show()
+	pyplot.show()
 
 
-	# ax = drawPoly(poly.buffer(-1), [])
-	# ax.set_title('Polygon')
-	# pyplot.show()
-	# print("Poly Made")
-	# genToolPath(poly)
 
-	# targetObject = Object(meshData, meshTopology)
-
-	# loop = genClosedLoop(meshTopology, plane)
-	# # print(loop)
-
-	# axes.add_collection3d(mplot3d.art3d.Poly3DCollection(meshData.vectors))
-
-	# # Auto scale to the mesh size
-	# scale = meshData.points.flatten(-1)
-	# axes.auto_scale_xyz(scale, scale, scale)
-
-	# pyplot.show()
 
 if __name__ == '__main__':
-	main()
+	main('test1.stl')
