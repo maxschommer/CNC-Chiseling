@@ -14,3 +14,10 @@ SAFE_HEIGHT = 30 # Safe height above the block to move to to clear the part
 
 PATH_INITIAL_OFFSET = 0 # The amount to offset the toolpaths from the sliced contour
 PATH_STEP_SIZE = 2
+
+TOOL_DIAMETER = 6.35 # Assumes a cylindrical tool with a 90 degree conical tip
+
+BUFFER_RES = 6 # Resolution of the corner circles when a sharp angle is offset in toolpath generation
+
+
+
