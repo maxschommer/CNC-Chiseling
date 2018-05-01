@@ -28,7 +28,7 @@ Install minicom https://help.ubuntu.com/community/Minicom
 Setting it up http://developer.ridgerun.com/wiki/index.php/Setting_up_Minicom_Client_-_Ubuntu
 
 1. Turn on Arm
-2. Connect the AWCII RS232 TERM usb first (as /dev/ttyUSB0). Then connect the RS232 port from the main processer (as /dev/ttyUSB1)
+2. Connect the AWCII RS232 TERM usb (as /dev/ttyUSB0).
 3. 
 ```
 sudo minicom -D /dev/ttyUSB0
@@ -39,16 +39,16 @@ sudo minicom -D /dev/ttyUSB0
 D (load from disk d)
 Y (yes, on scribe marks)
 abort 0 (abort background process)
+disable dry.run
+enable power
 ``` 
 
 6. exit minicom using ctrl-A Q
 7.
 ```
-python sendvplus.py 
+python sendvplus.py output.pg output
 ```
-8. 
-disable dry.run
-enable power
+8. open minicom and connect to USB0 and run file with ```exec output```
 
 # Running Slicer and CAM
 

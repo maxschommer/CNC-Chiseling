@@ -1,6 +1,6 @@
 import numpy as np
 
-ZERO_OFFSET = np.array([450,-130,0])  # The offset needed to zero to the material location
+ZERO_OFFSET = np.array([415,-210,-150])  # The offset needed to zero to the material location
 MV_BLOCK = True # If the block should be moved with the offset or not
 
 Z_SPACING = .5 # Layer Height
@@ -9,6 +9,7 @@ Z_SPACING = .5 # Layer Height
  
 BLOCK_CENTER = np.array([0, 0, 15]) # Center of the box pre-offset (in part coordinates)
 BLOCK_DIMENSIONS = np.array([40, 40, 30])
+
 
 SAFE_HEIGHT = 30 # Safe height above the block to move to to clear the part
 

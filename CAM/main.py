@@ -3,6 +3,7 @@ import numpy as np
 import plot
 from objectDefinitions import *
 from processingFunctions import *
+from vplusConverter import writeVplus
 import bintrees
 from stl import mesh
 import copy
@@ -145,3 +146,4 @@ def main( meshFile, outputFile="out.txt" ):
 
 if __name__ == '__main__':
 	main('test2.stl')
+	writeVplus('out.txt','output.pg')
