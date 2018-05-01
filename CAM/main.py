@@ -144,4 +144,4 @@ def main( meshFile, outputFile="out.txt" ):
 
 
 if __name__ == '__main__':
-	main('test1.stl')
+	main('test2.stl')

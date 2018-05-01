@@ -195,13 +195,14 @@ Optional paramaters to be added later for toolpath generation.
 Units are in Millimeters
 """
 def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, zHeight=0, topBounds=0, bufferRes=4 ):
-
+	multiPoly = multiPoly.simplify(params.POLY_TOL, preserve_topology=True)
 	polyList = []
 	step = initial_Offset
 	inc = 0
 	while (1):
 		inc += 1
 		poly = multiPoly.buffer(step, resolution=bufferRes)
+		poly = poly.simplify(params.POLY_TOL, preserve_topology=True)
 		if poly.is_empty:
 			break
 
