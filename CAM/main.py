@@ -35,7 +35,9 @@ def main( meshFile, outputFile="out.txt" ):
 	#Length, width, and height of the block to machine the part out of.
 	blockDimensions = params.BLOCK_DIMENSIONS
 
-	slicePlanes = genSlicePlanes(blockDimensions[2], params.Z_SPACING, CSys([0,0, Block.Z_MIN], [0,0,1], [1,0,0]))
+	slicePlanes = genSlicePlanes(blockDimensions[2], 
+								 params.Z_SPACING, 
+								 CSys([0,0, Block.Z_MIN], [0,0,1], [1,0,0]))
 
 
 	# Round planes and vertices so they don't intersect
@@ -90,10 +92,12 @@ def main( meshFile, outputFile="out.txt" ):
 
 	toolPathList = []
 	#Generate toolpaths that account for the tool geometry
-	toolOffsets = generateToolOffsets(unionedPolyList, params.Z_SPACING, bufferRes=params.BUFFER_RES)
+	toolOffsets = generateToolOffsets(unionedPolyList, params.Z_SPACING, 
+		bufferRes=params.BUFFER_RES, noVertical=params.NO_VERTICAL)
 	for i, poly in enumerate(toolOffsets, 0):
 		poly = polygonOutside.difference(poly)
-		toolPaths = genToolPath( poly, pathStepSize=params.PATH_STEP_SIZE, initial_Offset=params.PATH_INITIAL_OFFSET, 
+		toolPaths = genToolPath( poly, pathStepSize=params.PATH_STEP_SIZE,
+			initial_Offset=params.PATH_INITIAL_OFFSET, 
 			zHeight=-i*params.Z_SPACING + Block.Z_MAX, 
 			topBounds = Block.Z_MAX+params.SAFE_HEIGHT)
 		if not toolPaths:

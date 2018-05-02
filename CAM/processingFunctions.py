@@ -269,7 +269,7 @@ def genToolPath( multiPoly, pathStepSize=3, initial_Offset=0, zHeight=0, topBoun
 	return res
 
 
-def generateToolOffsets( contourList, zSpacing, bufferRes=4):
+def generateToolOffsets( contourList, zSpacing, bufferRes=4, noVertical=False):
 	"""
 	Takes in a contour list (a list of polygons) that already
 	take overhangs into account (i.e., all n+m contours contain
@@ -286,13 +286,17 @@ def generateToolOffsets( contourList, zSpacing, bufferRes=4):
 		currOffset = zSpacing
 		buffList = []
 		n = 1
-		while n <= i:
-			if currOffset > maxOffset:
-				currOffset = maxOffset
-				n = i # Set this so that the loop breaks after this round is completed
-			buffList.append(contourList[i-n].buffer(currOffset, resolution=bufferRes))
-			n = n + 1
-			currOffset = zSpacing*n
+		if noVertical:
+			if n <= i:
+				buffList.append(resContourList[i-n].buffer(currOffset, resolution=bufferRes))
+		else:
+			while n <= i:
+				if currOffset > maxOffset:
+					currOffset = maxOffset
+					n = i # Set this so that the loop breaks after this round is completed
+				buffList.append(contourList[i-n].buffer(currOffset, resolution=bufferRes))
+				n = n + 1
+				currOffset = zSpacing*n
 
 		resContourList[i] = cascaded_union(buffList + [resContourList[i]])
 		# if buffList:
